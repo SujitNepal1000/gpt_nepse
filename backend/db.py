@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 import logging
 import pandas as pd
@@ -5,7 +7,10 @@ from datetime import datetime, timedelta
 
 from models import Base
 
-DB_URL = "postgresql://postgres:admin@localhost:5432/nepsegpt"
+# Load environment variables
+load_dotenv()
+
+DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres:admin@localhost:5432/nepsegpt")
 engine = create_engine(DB_URL)
 Base.metadata.create_all(engine)
 

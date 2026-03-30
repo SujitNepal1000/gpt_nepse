@@ -1,6 +1,11 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
-DB_URL = "postgresql://postgres:admin@localhost:5432/nepsegpt"
+# Load environment variables
+load_dotenv()
+
+DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres:admin@localhost:5432/nepsegpt")
 engine = create_engine(DB_URL)
 
 columns_to_add = [

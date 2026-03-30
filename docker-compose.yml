@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Local PostgreSQL service (Optional - replaced by Supabase in production)
+  # db:
+  #   image: postgres:16-alpine
+  #   container_name: nepse_db
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: admin
+  #     POSTGRES_DB: nepsegpt
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: nepse_backend
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - API_TITLE=NEPSE AI Trading System
+      - CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8000:8000"
+    # depends_on:
+    #   - db
+
+  frontend:
+    build: ./frontend
+    container_name: nepse_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
