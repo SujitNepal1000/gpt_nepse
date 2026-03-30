@@ -7,3 +7,12 @@ requests
 schedule
 pytz
 numpy
+python-multipart
+openpyxl
+streamlit
+plotly
+scikit-learn
+xgboost
+lightgbm
+python-dotenv
+

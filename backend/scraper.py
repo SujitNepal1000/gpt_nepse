@@ -1,77 +1,72 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import logging
+from datetime import datetime, timedelta
 from db import engine
 
-def calculate_rsi(series, period=14):
-    delta = series.diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
-
-    avg_gain = gain.rolling(period).mean()
-    avg_loss = loss.rolling(period).mean()
-
-    rs = avg_gain / avg_loss
-    return 100 - (100 / (1 + rs))
-
-def generate_signal(row):
-    score = 0
-
-    # RSI
-    if row["rsi"] < 30:
-        score += 2
-    elif row["rsi"] < 50:
-        score += 1
-
-    # Trend
-    if row["ema_trend"] == "Uptrend":
-        score += 2
-
-    # Volume spike
-    if row["volume"] > row["volume_avg"]:
-        score += 2
-
-    # Final decision
-    if score >= 5:
-        return "STRONG BUY"
-    elif score >= 3:
-        return "BUY"
-    else:
-        return "HOLD"
+log = logging.getLogger('nepse.scraper')
 
 def fetch_data():
-    # 🔁 Replace with Sharesansar API
-    data = [
-        {"symbol": "NABIL", "sector": "Banking", "ltp": 500, "close": 490, "volume": 15000},
-        {"symbol": "NTC", "sector": "Telecom", "ltp": 800, "close": 780, "volume": 9000},
-    ]
+    """
+    Mock fetch for historical/snapshot data.
+    Generates 20 days of history for NABIL to ensure RSI etc. are computable.
+    """
+    base_date = datetime.now().date()
+    data = []
+    
+    # 20 days of history for NABIL
+    for i in range(25, -1, -1):
+        dt = base_date - timedelta(days=i)
+        # Sequence forcing RSI down
+        price = 600 - (25 - i) * 10 if i > 5 else 350 + (5 - i) * 5
+        data.append({
+            "symbol": "NABIL", "sector": "Banking", "ltp": price, "close": price, 
+            "volume": 15000, "date": dt, "open": price, "high": price+2, "low": price-2
+        })
+        
+    # NTC with high RSI sequence
+    for i in range(25, -1, -1):
+        dt = base_date - timedelta(days=i)
+        price = 800 + (25 - i) * 15
+        data.append({
+            "symbol": "NTC", "sector": "Telecom", "ltp": price, "close": price, 
+            "volume": 9000, "date": dt, "open": price, "high": price+5, "low": price-5
+        })
+        
     return pd.DataFrame(data)
 
 def process_data(df):
-    df["date"] = datetime.now().date()
-
-    # RSI
-    df["rsi"] = calculate_rsi(df["close"])
-
-    # Volume avg
-    df["volume_avg"] = df["volume"].rolling(3).mean()
-
-    # EMA trend
-    df["ema"] = df["close"].ewm(span=50).mean()
-    df["ema_trend"] = np.where(df["close"] > df["ema"], "Uptrend", "Downtrend")
-
-    # Signals
-    df["signal"] = df.apply(generate_signal, axis=1)
-
-    # Trade levels
-    df["entry"] = df["ltp"]
-    df["target"] = df["ltp"] * 1.05
-    df["stoploss"] = df["ltp"] * 0.97
-
+    """
+    Basic cleaning of raw data. 
+    Technical indicators are now handled by indicators.py
+    """
+    if 'date' not in df.columns:
+        df["date"] = pd.to_datetime(datetime.now().date())
+    else:
+        df['date'] = pd.to_datetime(df['date'])
+        
+    for col in ['ltp', 'close', 'volume', 'open', 'high', 'low']:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    
+    # Placeholder for diff_pct if missing
+    if 'diff_pct' not in df.columns and 'close' in df.columns:
+        df['diff_pct'] = 0.0 # Will be calculated by pipeline with history
+        
     return df
 
 def save_to_db(df):
     df.to_sql("stock_data", engine, if_exists="append", index=False)
+
+def fetch_live():
+    # 🔁 Real implementation would scrape Sharesansar Live Trading page
+    log.info("Fetching live market data...")
+    # Return NABIL and NTC today
+    data = [
+        {"symbol": "NABIL", "ltp": 340, "close": 340, "volume": 2000, "diff_pct": -2.0, "open": 345, "high": 345, "low": 338},
+        {"symbol": "NTC", "ltp": 1200, "close": 1200, "volume": 1200, "diff_pct": 3.5, "open": 1150, "high": 1210, "low": 1150},
+    ]
+    return data
 
 def run():
     df = fetch_data()
