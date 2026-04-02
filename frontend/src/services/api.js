@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const API = axios.create({
-  // Use Vercel's relative /api route in production, or localhost in dev
-  baseURL: process.env.REACT_APP_API_URL || "/api"
+  // Use localhost in dev, or Vercel's relative /api route in production
+  baseURL: "http://localhost:8000"
 });
 
 export const getStocks = () => API.get("/stocks");

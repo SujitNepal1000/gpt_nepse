@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from sqlalchemy import text
 from db import engine
 import io
 
@@ -59,7 +60,13 @@ async def upload_file(file: UploadFile = File(...)):
         return {"error": "Excel file must contain a 'Symbol' column."}
     
     # Basic cleaning
-    df["date"] = datetime.now().date()
+    if 'date' in df.columns:
+        df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date
+    else:
+        df['date'] = datetime.now().date()
+    
+    # Drop rows with invalid dates
+    df = df.dropna(subset=['date'])
     # Ensure numerical columns are clean
     for col in ["ltp", "close", "volume", "open", "high", "low", "turnover", "diff_pct"]:
         if col in df.columns:
@@ -71,8 +78,10 @@ async def upload_file(file: UploadFile = File(...)):
     df = process_with_history(df)
     
     if not df.empty:
-        df.to_sql("stock_data", engine, if_exists="append", index=False)
-        return {"message": f"Successfully uploaded and analyzed {len(df)} records!"}
+        with engine.begin() as conn:
+            conn.execute(text("DELETE FROM stock_data"))
+            df.to_sql("stock_data", conn, if_exists="append", index=False)
+        return {"message": f"Successfully uploaded and replaced data with {len(df)} records!"}
     
     return {"error": "No data processed"}
 
