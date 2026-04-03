@@ -247,7 +247,8 @@ with st.sidebar:
 
                             with engine.begin() as conn:
                                 conn.execute(text("DELETE FROM stock_data"))
-                                full_for_db.to_sql("stock_data", conn, if_exists="append", index=False)
+                            full_for_db.to_sql("stock_data", engine, if_exists="append", index=False)
+
 
                             # Store analysis in session
                             st.session_state['analyzed_data'] = analyzed

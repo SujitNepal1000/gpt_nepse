@@ -52,8 +52,10 @@ async def upload_file(file: UploadFile = File(...)):
         "Symbol": "symbol", "LTP": "ltp", "Close": "close", 
         "Vol": "volume", "Volume": "volume", "Open": "open", 
         "High": "high", "Low": "low", "Turnover": "turnover",
-        "Diff %": "diff_pct", "Diff Pct": "diff_pct"
+        "Diff %": "diff_pct", "Diff Pct": "diff_pct",
+        "Date": "date", "Sector": "sector"
     }
+
     df.rename(columns=rename_map, inplace=True)
     
     if "symbol" not in df.columns:
@@ -80,8 +82,9 @@ async def upload_file(file: UploadFile = File(...)):
     if not df.empty:
         with engine.begin() as conn:
             conn.execute(text("DELETE FROM stock_data"))
-            df.to_sql("stock_data", conn, if_exists="append", index=False)
+        df.to_sql("stock_data", engine, if_exists="append", index=False)
         return {"message": f"Successfully uploaded and replaced data with {len(df)} records!"}
+
     
     return {"error": "No data processed"}
 
